@@ -1,0 +1,23 @@
+---
+# playbook to start vSRX cloudformation template
+# we're using template from S3 bucket
+# default stackname can be overwritten with -e "stack_name=xxx" on cli
+# the vSRX AMI is taking it's time to boot and configure itself so be patience!
+
+- name: Ansible CloudFormation
+  hosts: localhost
+  gather_facts: no
+  vars:
+    stack_name: ansible-vsrx
+    region: eu-west-1
+  tasks:
+    - name: launching CloudFormation stack {{stack_name}} on AWS 
+      cloudformation:
+        state: present
+        stack_name: "{{ stack_name }}"
+        region: "{{ region }}"
+        disable_rollback: true
+        #template_url: https://s3-eu-west-1.amazonaws.com/cf-templates-qyrmlcpuyuai-eu-west-1/2016286TOF-vSRX8w8ms3qsylydebgepvo51rwwmi
+        template_url: https://s3-eu-west-1.amazonaws.com/cf-templates-qyrmlcpuyuai-eu-west-1/20162954H8-template1wazgwakeq6jtar6prezmpldi
+        tags:
+          build: ansible-cloudformation

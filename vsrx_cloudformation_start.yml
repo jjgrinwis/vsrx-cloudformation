@@ -1,0 +1,92 @@
+---
+# playbook to stop vSRX build by cloudformation
+# default stackname can be overwritten with -e "stack_name=xxx" on cli
+# global vars defined in group_vars/all/vars_file.yml
+- name: Ansible CloudFormation
+  hosts: localhost
+  gather_facts: no
+  vars: 
+    region: eu-west-1
+    state: running
+    delay: 120
+  tasks:
+    - name: get CloudFormation stack {{ stack_name }} facts from AWS 
+      cloudformation_facts:
+        stack_name: "{{ stack_name }}"
+        stack_resources: true
+        region: "{{ region }}"
+
+    # we need vSRXami instance_id info from ansible_facts.cloudformation.ansible-vsrx.stack_resources
+    # when using cloudformation_facts we don't need the inventory script.
+    - name: Checking instance_id of tag_Name_vSRXami
+      debug: var=cloudformation['{{ stack_name }}']['stack_resources']['vSRXami']
+
+    # no create var with IP of management address.
+    # the can be done in group_vars stuff but we_re using nested var which took me an hour to find out
+    # stack_name will now automatically be set to value of {{ stack_name }} 
+    - name: set fact
+      set_fact: 
+        vSRX_group: "{{ cloudformation[stack_name]['stack_resources']['vSRXmanagementEIP'] }}"
+
+    # now create special host group var
+    - name: create new host group
+      add_host: name="{{ vSRX_group }}" groups=vSRX
+
+    # power on the vSRX"
+    - name: now change state to {{ state }} of our {{ stack_name }} vSRX
+      ec2:
+         state: "{{ state }}"
+         region: "{{ region }}"
+         instance_id: "{{ cloudformation[stack_name]['stack_resources']['vSRXami'] }}"
+
+    # first wait 120 seconds and then try to connect every 5 seconds for 10 minutes.
+    # the vSRX will come up but then will start to reconfigure itself which takes some time.
+    - name: wait for vSRX to come online. Be patience it will take some time as it's configuring itself
+      wait_for: port=22 host="{{ item }}" delay="{{ delay }}" timeout=600
+      with_items: "{{ vSRX_group }}"
+
+    #"
+    # now copy file using a raw method, no python on vSRX so we can't use copy module
+    # file config file will only activate netconf and set root-authentication
+    - name: copy file with some set commands using raw method
+      raw: scp -oStrictHostKeyChecking=no -i files/id984390-key.pem files/"{{ config_file }}" root@"{{ item }}":/cf/root
+      with_items: "{{ vSRX_group }}"
+
+    # now copy file using a raw method, no python on vSRX so we can't use copy module
+    - name: copy file with shell script to configure vSRX 
+      raw: scp -i files/id984390-key.pem files/"{{ shell_commands }}" root@"{{ item }}":/cf/root
+      with_items: "{{ vSRX_group }}"
+
+# now it's time to configure our vSRX, we're enabling netconf and set well known passwd
+- name: Configure netconf on vSRX's
+  hosts: vSRX
+  gather_facts: no
+  tasks:
+    # again, no python on vSRX so run /sbin/sh with shell_commands file to configure vSRX via raw module
+    - name: run shell script to activate initial config
+      raw: /sbin/sh/ /cf/root/"{{ shell_commands }}" >> /cf/root/output.txt
+
+#"# now gather some facts from the vSRX. The default config is to only allow ssh keys
+# as I'm a lazy bastard, I'm just removing that from the initial config and created a new user
+# we can now use seperate username and password to connect as we can't reuse the ansible_ssh_private_key_file
+# in production we should make use of the local ssh key from the ansible user
+# but to make it a little more secure, lets create vault-vars.yml and only include it when starting a vSRX
+# use --ask-vault-pass on command line to decrypt vars
+- name: Gather some facts via netconf using Juniper.junos role
+  roles:
+    - Juniper.junos
+  hosts: vSRX
+  vars_files:
+     - vault-vars.yml
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: get junos facts
+      junos_get_facts: host={{ inventory_hostname }} port=22 user={{ netconf_user }} passwd={{ netconf_passwd }}
+      register: junos
+
+    - name: show the facts
+      debug: msg="this vSRX is running version {{ junos.facts.version }}"
+
+    - name: using jinja template to push the config
+      debug: msg="Now you can use jinja template and junos_install_config to push configuration to this device using netconf, good luck"

@@ -1,0 +1,27 @@
+---
+# playbook to stop vSRX build by cloudformation
+# default stackname can be overwritten with -e "stack_name=xxx" on cli
+# global vars defined in group_vars/all/vars_file.yml
+- name: Ansible CloudFormation
+  hosts: localhost
+  gather_facts: no
+  vars: 
+    region: eu-west-1
+    state: stopped
+  tasks:
+    - name: get CloudFormation stack {{ stack_name }} facts from AWS 
+      cloudformation_facts:
+        stack_name: "{{ stack_name }}"
+        stack_resources: true
+        region: "{{ region }}"
+
+    # we need vSRXami instance_id info from ansible_facts.cloudformation.ansible-vsrx.stack_resources
+    # when using cloudformation_facts we don't need the inventory script.
+    - name: Checking instance_id of tag_Name_vSRXami
+      debug: var=cloudformation['{{ stack_name }}']['stack_resources']['vSRXami']
+
+    - name: now change state to {{ state }} of our {{ stack_name }} vSRX
+      ec2:
+         state: "{{ state }}"
+         region: "{{ region }}"
+         instance_id: "{{ cloudformation[stack_name]['stack_resources']['vSRXami'] }}"

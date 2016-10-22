@@ -1,0 +1,4 @@
+stack_name: ansible-vsrx
+config_file: initial_junos_config 
+shell_commands: activate_config.sh
+vSRX_group: "{{ cloudformation['{{ [stack_name] }}']['stack_resources']['vSRXmanagementEIP'] }}"

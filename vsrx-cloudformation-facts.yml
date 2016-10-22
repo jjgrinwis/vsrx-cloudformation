@@ -1,0 +1,49 @@
+---
+# playbook to get vSRX cloudformation facts
+# default stackname can be overwritten with -e "stack_name=xxx" on cli
+# global vars defined in group_vars/all/vars_file.yml
+
+- name: Ansible CloudFormation
+  hosts: localhost
+  gather_facts: no
+  vars: 
+  tasks:
+    - name: get CloudFormation stack {{ stack_name }} facts from AWS 
+      cloudformation_facts:
+        stack_name: "{{ stack_name }}"
+        stack_resources: true
+        region: eu-west-1
+
+    # we need vSRXmanagementEIP info from ansible_facts.cloudformation.ansible-vsrx.stack_resources
+    - name: Checking IP address of tag_Name_vSRXami
+      debug: var=cloudformation['{{ stack_name }}']['stack_resources']['vSRXami']
+
+    # now from this vSRX istance, get the interface facts
+    # the cloudinformation_facts wont return that result
+    # we're using some basic AWS interface filtering to only lookup interface-index 1,2 and 3 from our vSRX AMI
+    - name: get ec2 eni facts
+      ec2_eni_facts:
+        filters:
+          attachment.instance-id: "{{ cloudformation[stack_name]['stack_resources']['vSRXami'] }}"
+          attachment.device-index: 
+            - "1"
+            - "2"
+            - "3"
+      register: vsrx_interface_facts
+
+    - debug: var=vsrx_interface_facts['network_interfaces']
+
+   # to make life easy, we're creating a dynamic hash with name and ip: 
+   #"vsrx_interface_ip": {
+   #     "vSRX-ge-0/0/1": "10.10.10.82", 
+   #     "vSRX-ge-0/0/2": "10.10.20.186"
+   # }
+   # default() will create empty hash and then fill hash with combine
+   # this var can be used in vsrx template to set ip addresses on interfaces
+   # we could use cloudformation to set static ip but this makes it more dynamic
+    - name: create hash with interface/private-ip combination
+      set_fact:
+         vsrx_interface_ip: "{{ vsrx_interface_ip|default({}) | combine( { item.description: item.private_ip_address }) }}"
+      with_items: "{{ vsrx_interface_facts['network_interfaces'] }}"
+
+    - debug: var=vsrx_interface_ip

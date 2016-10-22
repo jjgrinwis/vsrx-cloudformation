@@ -1,0 +1,6 @@
+set system root-authentication encrypted-password "$5$qQUopxo5$v7xu96ZVlYUE4BEp0U6CdBWT/6TSXOHVVxyw1y/jUz7"
+set system services netconf ssh
+set system login user netconf uid 2000
+set system login user netconf class super-user
+set system login user netconf authentication encrypted-password "$5$hfHHGbnu$VE14QaRebRQmMfdGNZaeImvuU2BVVjttdwT9dUkpbK/"
+delete system services ssh no-passwords

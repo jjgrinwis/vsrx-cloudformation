@@ -1,0 +1,6 @@
+*.pem
+*.zip
+*.gz
+*.rpm
+set_env
+vault-vars.yml
