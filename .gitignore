@@ -4,3 +4,5 @@
 *.rpm
 set_env
 vault-vars.yml
+.vault_pass.txt
+files/initial_junos_config

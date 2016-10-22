@@ -1,0 +1,28 @@
+{# this generates vSRX specific interfaces config. It will be merged with the generated config #}
+{# we know it should be a /24 but should look that up in next version#}
+interfaces {
+    ge-0/0/0 {
+        unit 0 {
+            description public;
+            family inet {
+                address {{ vsrx_interface_ip['vSRX-ge-0/0/0'] }}/24;
+            }
+        }
+    }
+    ge-0/0/1 {
+        unit 0 {
+            description private01;
+            family inet {
+                address {{ vsrx_interface_ip['vSRX-ge-0/0/1'] }}/24;
+            }
+        }
+    }
+    ge-0/0/2 {
+        unit 0 {
+            description private02;
+            family inet {
+                address {{ vsrx_interface_ip['vSRX-ge-0/0/2'] }}/24;
+            }
+        }
+    }
+}

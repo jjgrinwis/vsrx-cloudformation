@@ -28,6 +28,19 @@
       set_fact: 
         vSRX_group: "{{ cloudformation[stack_name]['stack_resources']['vSRXmanagementEIP'] }}"
 
+    # now from this vSRX istance, get the interface facts
+    # the cloudinformation_facts wont return that result
+    # we're using some basic AWS interface filtering to only lookup interface-index 1,2 and 3 from our vSRX AMI
+    - name: get ec2 eni facts
+      ec2_eni_facts:
+        filters:
+          attachment.instance-id: "{{ cloudformation[stack_name]['stack_resources']['vSRXami'] }}"
+          attachment.device-index: 
+            - "1"
+            - "2"
+            - "3"
+      register: vsrx_interface_facts
+
     # now create special host group var
     - name: create new host group
       add_host: name="{{ vSRX_group }}" groups=vSRX
@@ -57,6 +70,25 @@
       raw: scp -i files/id984390-key.pem files/"{{ shell_commands }}" root@"{{ item }}":/cf/root
       with_items: "{{ vSRX_group }}"
 
+    # to make life easy, we're creating a dynamic hash with name and ip: 
+    #"vsrx_interface_ip": {
+    #     "vSRX-ge-0/0/1": "10.10.10.82", 
+    #     "vSRX-ge-0/0/2": "10.10.20.186"
+    # }
+    # default() will create empty hash and then fill hash with combine
+    # this var can be used in vsrx template to set ip addresses on interfaces
+    # we could use cloudformation to set static ip but this makes it more dynamic
+    - name: create hash with interface/private-ip combination
+      set_fact:
+         vsrx_interface_ip: "{{ vsrx_interface_ip|default({}) | combine( { item.description: item.private_ip_address }) }}"
+      with_items: "{{ vsrx_interface_facts['network_interfaces'] }}"
+
+    - debug: var=vsrx_interface_ip
+
+    # now build junos interface config file
+    - name: build junos interface configuration from jinja template
+      template: src=interface_config.j2 dest=files/interface_config.junos
+
 # now it's time to configure our vSRX, we're enabling netconf and set well known passwd
 - name: Configure netconf on vSRX's
   hosts: vSRX
@@ -65,6 +97,7 @@
     # again, no python on vSRX so run /sbin/sh with shell_commands file to configure vSRX via raw module
     - name: run shell script to activate initial config
       raw: /sbin/sh/ /cf/root/"{{ shell_commands }}" >> /cf/root/output.txt
+
 
 #"# now gather some facts from the vSRX. The default config is to only allow ssh keys
 # as I'm a lazy bastard, I'm just removing that from the initial config and created a new user
@@ -88,5 +121,15 @@
     - name: show the facts
       debug: msg="this vSRX is running version {{ junos.facts.version }}"
 
-    - name: using jinja template to push the config
-      debug: msg="Now you can use jinja template and junos_install_config to push configuration to this device using netconf, good luck"
+    #"#now we're going to configure our vSRX using the previous generated config file
+    # this will configure ip addresses on the interface
+    # we need to extend this with some virtual routers and routing info as we want to keep on using fxp0 as management interface
+    - name: using filled-in template to push the config
+      junos_config:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        username: "{{ netconf_user }}"
+        password: "{{ netconf_passwd }}"
+        src: files/interface_config.junos
+        replace: yes
+        comment: ansible generated interface config
