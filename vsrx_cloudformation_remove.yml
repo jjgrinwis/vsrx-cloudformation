@@ -3,10 +3,8 @@
 - name: Ansible CloudFormation
   hosts: localhost
   gather_facts: no
-  vars:
-    stack_name: ansible-vsrx
   tasks:
-    - name: remove CloudFormation stack "{{ stack_name }}"
+    - name: remove CloudFormation stack {{ stack_name }}
       cloudformation:
         state: absent
         stack_name: "{{ stack_name }}"

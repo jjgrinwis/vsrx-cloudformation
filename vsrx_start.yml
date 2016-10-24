@@ -10,7 +10,7 @@
     state: running
     delay: 120
   tasks:
-    - name: get CloudFormation stack {{ stack_name }} facts from AWS 
+    - name: get CloudFormation stack stack_name facts from AWS 
       cloudformation_facts:
         stack_name: "{{ stack_name }}"
         stack_resources: true
@@ -33,6 +33,7 @@
     # we're using some basic AWS interface filtering to only lookup interface-index 1,2 and 3 from our vSRX AMI
     - name: get ec2 eni facts
       ec2_eni_facts:
+        region: "{{ region }}"
         filters:
           attachment.instance-id: "{{ cloudformation[stack_name]['stack_resources']['vSRXami'] }}"
           attachment.device-index: 
@@ -87,7 +88,7 @@
 
     # now build junos interface config file
     - name: build junos interface configuration from jinja template
-      template: src=interface_config.j2 dest=files/interface_config.junos
+      template: src=interface_config.j2 dest=files/interface_config.conf
 
 # now it's time to configure our vSRX, we're enabling netconf and set well known passwd
 - name: Configure netconf on vSRX's
@@ -124,12 +125,13 @@
     #"#now we're going to configure our vSRX using the previous generated config file
     # this will configure ip addresses on the interface
     # we need to extend this with some virtual routers and routing info as we want to keep on using fxp0 as management interface
+    # we first used junos_config: That's the module coming with Ansible. Now using the latest version from Juniper.junos junos_install_config:
     - name: using filled-in template to push the config
-      junos_config:
+      junos_install_config:
         host: "{{ inventory_hostname }}"
         port: 22
-        username: "{{ netconf_user }}"
-        password: "{{ netconf_passwd }}"
-        src: files/interface_config.junos
-        replace: yes
+        user: "{{ netconf_user }}"
+        passwd: "{{ netconf_passwd }}"
+        file: files/interface_config.conf
+        replace: true
         comment: ansible generated interface config
