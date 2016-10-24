@@ -2,6 +2,7 @@
 *.zip
 *.gz
 *.rpm
+*.retry
 set_env
 vault-vars.yml
 .vault_pass.txt
