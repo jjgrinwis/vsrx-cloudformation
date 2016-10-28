@@ -17,6 +17,8 @@
         region: "{{ region }}"
         disable_rollback: true
         #template_url: https://s3-eu-west-1.amazonaws.com/cf-templates-qyrmlcpuyuai-eu-west-1/2016286TOF-vSRX8w8ms3qsylydebgepvo51rwwmi
-        template_url: https://s3-eu-west-1.amazonaws.com/cf-templates-qyrmlcpuyuai-eu-west-1/20162954H8-template1wazgwakeq6jtar6prezmpldi
+        #template_url: https://s3-eu-west-1.amazonaws.com/cf-templates-qyrmlcpuyuai-eu-west-1/20162954H8-template1wazgwakeq6jtar6prezmpldi
+        # version 1.1 where we added DependsOn on eipassociation between EIP and fxp0 and ge-0/0/0
+        template_url: https://s3-eu-west-1.amazonaws.com/cf-templates-qyrmlcpuyuai-eu-west-1/2016302okT-vsrx-1.1h1hyj4h5nlt9jo7lt91f9a4i
         tags:
           build: ansible-cloudformation

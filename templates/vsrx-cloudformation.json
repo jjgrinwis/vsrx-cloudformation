@@ -1000,25 +1000,6 @@
         }
       }
     },
-    "EC2EIPA20X4V": {
-      "Type": "AWS::EC2::EIPAssociation",
-      "Properties": {
-        "AllocationId": {
-          "Fn::GetAtt": [
-            "vSRXmanagementEIP",
-            "AllocationId"
-          ]
-        },
-        "NetworkInterfaceId": {
-          "Ref": "vSRXfxp0"
-        }
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "79ef067d-a2e3-431d-b03b-edcdcc5fec76"
-        }
-      }
-    },
     "vSRXge000": {
       "Type": "AWS::EC2::NetworkInterface",
       "Properties": {
@@ -1042,25 +1023,6 @@
       "Metadata": {
         "AWS::CloudFormation::Designer": {
           "id": "94cda490-14f1-401b-9442-afa3bc2b4406"
-        }
-      }
-    },
-    "EC2EIPA4C3ZF": {
-      "Type": "AWS::EC2::EIPAssociation",
-      "Properties": {
-        "AllocationId": {
-          "Fn::GetAtt": [
-            "vSRXpublicEIP",
-            "AllocationId"
-          ]
-        },
-        "NetworkInterfaceId": {
-          "Ref": "vSRXge000"
-        }
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "877d9bb1-8788-42c3-b0b1-720fac7fde05"
         }
       }
     },
@@ -1225,6 +1187,50 @@
           "id": "8bbf8dcf-bd06-40cd-80d5-de06737b4556"
         }
       }
+    },
+    "EIPfxp0ASS": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "vSRXmanagementEIP",
+            "AllocationId"
+          ]
+        },
+        "NetworkInterfaceId": {
+          "Ref": "vSRXfxp0"
+        }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "79ef067d-a2e3-431d-b03b-edcdcc5fec76"
+        }
+      },
+      "DependsOn": [
+        "vSRXami"
+      ]
+    },
+    "EIPge000ASS": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "vSRXpublicEIP",
+            "AllocationId"
+          ]
+        },
+        "NetworkInterfaceId": {
+          "Ref": "vSRXge000"
+        }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "877d9bb1-8788-42c3-b0b1-720fac7fde05"
+        }
+      },
+      "DependsOn": [
+        "vSRXami"
+      ]
     }
   }
 }
